@@ -1,0 +1,36 @@
+// Exact C8 mask and tie semantics from PractRand 0.96 (CC0).
+#version 450
+// One invocation owns four packed output bytes, avoiding 8-bit storage features
+// and races between adjacent classifications. Tie bits retain CPU Arbee order.
+layout(local_size_x = 64) in;
+layout(set = 0, binding = 0, std430) readonly buffer Input { uint words[]; } source;
+layout(set = 0, binding = 1, std430) readonly buffer Ties { uint words[]; } ties;
+layout(set = 0, binding = 2, std430) writeonly buffer Output { uint words[]; } output_data;
+layout(push_constant) uniform Parameters { uint outputs; } parameters;
+const uint masks[5] = uint[](0x55555555u, 0x33333333u, 0x0f0f0f0fu, 0x00ff00ffu, 0x0000ffffu);
+void main() {
+    uint group = gl_GlobalInvocationID.x;
+    if (group * 4u >= parameters.outputs) return;
+    uint packed_value = 0u;
+    for (uint lane = 0u; lane < 4u; ++lane) {
+        uint index = group * 4u + lane;
+        if (index >= parameters.outputs) break;
+        uint base = index * 4u;
+        uvec4 value = uvec4(source.words[base], source.words[base + 1u], source.words[base + 2u], source.words[base + 3u]);
+        uint random = ties.words[index / 2u] >> ((index & 1u) * 8u);
+        uint classification = 0u;
+        for (uint bit = 0u; bit < 8u; ++bit) {
+            uvec4 mask;
+            if (bit < 5u) mask = uvec4(masks[bit]);
+            else if (bit == 5u) mask = uvec4(0xffffffffu, 0u, 0xffffffffu, 0u);
+            else if (bit == 6u) mask = uvec4(0xffffffffu, 0xffffffffu, 0u, 0u);
+            else mask = uvec4(0u);
+            ivec4 counts = bitCount(value ^ mask);
+            int count = counts.x + counts.y + counts.z + counts.w;
+            classification = (classification << 1u) | uint(count > 64 || (count == 64 && (random & 1u) != 0u));
+            random >>= 1u;
+        }
+        packed_value |= classification << (lane * 8u);
+    }
+    output_data.words[group] = packed_value;
+}

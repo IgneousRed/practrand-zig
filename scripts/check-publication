@@ -1,0 +1,64 @@
+#!/bin/sh
+# Review complete outgoing ancestry against this repository's approved inventory.
+set -eu
+fail() { printf '%s\n' "publication: $*" >&2; exit 1; }
+root=$(git rev-parse --show-toplevel)
+cd "$root"
+[ "$(git rev-parse --is-shallow-repository)" = false ] || fail 'a shallow history cannot establish publication safety'
+mode=$(cat .publication-mode)
+case "$mode" in public|private) ;; *) fail 'unclassified repository visibility' ;; esac
+[ -s .publication-files ] || fail 'missing reviewed file inventory'
+[ -f .publication-denied-blobs ] || fail 'missing reclassified-content inventory'
+mkdir -p .work
+temporary=$(mktemp -d "$root/.work/publication.XXXXXXXX")
+trap 'rm -rf "$temporary"' EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+: > "$temporary/commits"
+review() {
+    local_ref=$1
+    oid=$2
+    remote_ref=$3
+    [ "$local_ref" = refs/heads/main ] && [ "$remote_ref" = refs/heads/main ] ||
+        fail 'only the explicitly reviewed main-to-main ref is publishable; no mirror, backup or application refs'
+    [ "$oid" != 0000000000000000000000000000000000000000 ] || fail 'ref deletion needs a separate decision'
+    git --no-replace-objects rev-list "$oid" >> "$temporary/commits"
+}
+if [ "${1:-}" = --stdin ]; then
+    while read -r local_ref oid remote_ref remote_oid; do
+        review "$local_ref" "$oid" "$remote_ref"
+    done
+else
+    [ "$#" -eq 1 ] || fail 'usage: scripts/check-publication main | --stdin'
+    [ "$1" = main ] || [ "$1" = refs/heads/main ] || fail 'only main is approved'
+    review refs/heads/main "$(git rev-parse refs/heads/main)" refs/heads/main
+fi
+[ -s "$temporary/commits" ] || fail 'no outgoing commit was reviewed'
+sort -u "$temporary/commits" > "$temporary/unique"
+while read -r commit; do
+    git --no-replace-objects ls-tree -r --format='%(objectmode) %(objectname) %(path)' "$commit" > "$temporary/tree"
+    while read -r permissions blob path; do
+        case "$permissions" in 100644|100755) ;; *) fail "non-regular source entry: $path" ;; esac
+        case "/$path/" in
+            */.private/*|*/.local/*|*/.vendor/*|*/.work/*|*/.git/*|*/vendor/*)
+                fail "reserved source path in outgoing history: $path" ;;
+        esac
+        case "$mode:$path" in
+            public:AGENTS.md|public:*/AGENTS.md)
+                fail "private instructions in public history: $path" ;;
+            public:notes/TODO.md|public:notes/REWORKS.md)
+                fail "private planning path in public history: $path" ;;
+        esac
+        if [ "$mode" = private ]; then
+            case "$path" in
+                README.md|.gitignore|.publication-*|scripts/check-publication|.githooks/pre-push|todo/*|reworks/*|experiments/*|instructions/*) ;;
+                *) fail "not a private maintained-record path: $path" ;;
+            esac
+        fi
+        grep -Fqx -- "$path" .publication-files || fail "unreviewed outgoing path: $path"
+        if grep -Fqx -- "$blob" .publication-denied-blobs; then
+            fail "reclassified or fetched content in outgoing history: $path"
+        fi
+    done < "$temporary/tree"
+done < "$temporary/unique"
+printf '%s\n' "publication: reviewed $mode main ancestry and file inventory"

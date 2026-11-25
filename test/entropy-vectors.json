@@ -1,0 +1,50 @@
+{
+  "format_version": 1,
+  "reference_version": "0.96",
+  "provenance": {
+    "archive_sha256": "e4caf7fda98b2c597bbda3b576753cf5a0f6047aab837c82be370ab798a672e1",
+    "driver_path": "test/reference_entropy.cpp",
+    "driver_sha256": "6a095071d2c5befa4a7b9d1760c23871dbf4c2cb16531182243a03048ecaff86",
+    "executable_sha256": "9aa1207c66d60c2631a90a7fa0a317471ad606b02495184075e69b7110401328",
+    "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin\n",
+    "architecture": "x86_64/Rosetta",
+    "build_command": [
+      "python3",
+      "-B",
+      "tools/build_reference.py",
+      "--driver",
+      "test/reference_entropy.cpp",
+      "--output",
+      ".work/entropy-reference/reference-entropy",
+      "--tools"
+    ],
+    "capture": "Each case captured twice with identical 1027 output bytes and metadata required. The driver follows original RNG_test.cpp mode 2 basic checks, then the unchanged EntropyPool_MetaRNG with 57-byte strings. These bounded successful cases do not establish freedom from UB007 crashes.",
+    "sha2_setup": "The original driver returned 13 (basic check 3) for sha2_based_pool at each listed seed; the original CLI also rejected seeds 0, 1 and 123456789abcdef at basic check 3. No SHA2 entropy-output fixture is claimed."
+  },
+  "cases": [
+    {
+      "expression": "arbee",
+      "seed": "0",
+      "bytes": 1027,
+      "width": 64,
+      "name": "EntropyPoolingTester(arbee,57to57)",
+      "sha256": "4ccfd84e155fd8cf02e0ab1f0fe191f621462e1f5042648a69b6b6effe652f40"
+    },
+    {
+      "expression": "arbee",
+      "seed": "123456789abcdef",
+      "bytes": 1027,
+      "width": 64,
+      "name": "EntropyPoolingTester(arbee,57to57)",
+      "sha256": "879ad6212589e90d6b37648cbf87325bb83e983b0bab651b0f4e68433bd87932"
+    },
+    {
+      "expression": "arbee",
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 1027,
+      "width": 64,
+      "name": "EntropyPoolingTester(arbee,57to57)",
+      "sha256": "ec1a37be462bd3371e2ec96e777f4fba3ed2aa303e08fb0f265b8c371e5e6fff"
+    }
+  ]
+}

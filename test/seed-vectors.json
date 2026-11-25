@@ -1,0 +1,663 @@
+{
+  "format_version": 1,
+  "reference_version": "0.96",
+  "provenance": {
+    "archive_sha256": "e4caf7fda98b2c597bbda3b576753cf5a0f6047aab837c82be370ab798a672e1",
+    "driver_source": "// Independent seeding-stream oracle over unchanged PractRand 0.96 sources.\n#include <cstdio>\n#include <cstdlib>\n#include <cstring>\n#include <cmath>\n#include <deque>\n#include <list>\n#include <map>\n#include <memory>\n#include <set>\n#include <sstream>\n#include <string>\n#include <vector>\n#include <PractRand_full.h>\n#include <PractRand/RNGs/all.h>\n#include <PractRand/RNGs/other/mt19937.h>\n#include <PractRand/RNGs/other/transform.h>\n#include <PractRand/RNGs/other/lcgish.h>\n#include <PractRand/RNGs/other/oddball.h>\n#include <PractRand/RNGs/other/simple.h>\n#include <PractRand/RNGs/other/cbuf.h>\n#include <PractRand/RNGs/other/indirection.h>\n#include <PractRand/RNGs/other/special.h>\n#include \"tools/RNG_from_name.h\"\nusing namespace PractRand;\n#include \"tools/Candidate_RNGs.h\"\n#include \"tools/SeedingTester.h\"\n\n// Direct rank-to-word construction, independent of the Zig edge selector.\nstatic __uint128_t balanced(unsigned width, __uint128_t rank) {\n    if (width == 4) {\n        const unsigned words[] = {0, 1, 3, 7, 5, 4, 12, 14, 6, 2, 10, 11, 15, 13, 9, 8};\n        return words[unsigned(rank)];\n    }\n    const unsigned half = width / 2;\n    const __uint128_t mask = (__uint128_t(1) << half) - 1;\n    const __uint128_t k = (rank >> 1) & mask;\n    const __uint128_t p = rank >> (half + 1);\n    const __uint128_t x = (k + (rank & 1)) & mask;\n    const __uint128_t y = (k - 2 * p) & mask;\n    return balanced(half, x) | (balanced(half, y) << half);\n}\n\nint main(int argc, char **argv) {\n    if (argc != 7) return 2; // expression mode bits low high bytes\n    RNG_Factories::register_recommended_RNGs();\n    RNG_Factories::register_nonrecommended_RNGs();\n    RNG_Factories::register_candidate_RNGs();\n    std::unique_ptr<RNGs::vRNG> rng(RNG_Factories::create_rng(argv[1]));\n    if (!rng) return 3;\n    unsigned bits = unsigned(std::strtoul(argv[3], nullptr, 10));\n    const Uint64 low = std::strtoull(argv[4], nullptr, 16);\n    const Uint64 high = std::strtoull(argv[5], nullptr, 16);\n    size_t bytes = std::strtoull(argv[6], nullptr, 10);\n    const bool original = !std::strcmp(argv[2], \"original\");\n    if (!bits) {\n        Uint64 l, h;\n        rng->get_maximum_seed(l, h);\n        bits = !l && !h ? 128 : 64 + unsigned(std::floor(std::log2(1.0 + double(h ? h : l)) + 0.000001));\n    }\n    if (bits < 16 || bits > 128) return 4;\n    std::fprintf(stderr, \"%u\\n\", bits);\n    if (original) {\n        rng.reset(new FastSeeder128_MetaRNG(rng.release(), int(bits)));\n        rng->seed(low, high);\n    } else if (std::strcmp(argv[2], \"gray\") && std::strcmp(argv[2], \"balanced-gray\")) return 5;\n    const __uint128_t mask = ~__uint128_t(0) >> (128 - bits);\n    const __uint128_t offset = (__uint128_t(low) | (__uint128_t(high) << 64)) & mask;\n    for (__uint128_t rank = 0; bytes; ++rank) {\n        if (!original) {\n            const __uint128_t value = ((!std::strcmp(argv[2], \"gray\") ? rank ^ (rank >> 1) : balanced(bits, rank)) ^ offset) & mask;\n            rng->seed(Uint64(value), Uint64(value >> 64));\n        }\n        const Uint64 word = rng->raw64();\n        const size_t count = bytes < 8 ? bytes : 8;\n        if (std::fwrite(&word, 1, count, stdout) != count) return 6;\n        bytes -= count;\n    }\n    return std::fflush(stdout) ? 7 : 0;\n}\n",
+    "driver_sha256": "70e76d009b5c967b439a486ac21ca85e998904f91a910958f0aad3b3bc8090cb",
+    "executable_sha256": "d2cf8623b635a2b8f74a296ae190722b87a89f50badd6557bbeaa731b47bab43",
+    "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin\n",
+    "architecture": "x86_64/Rosetta",
+    "build_command": [
+      "python3",
+      "-B",
+      "tools/build_reference.py",
+      "--driver",
+      "test/reference_seeding.cpp",
+      "--output",
+      ".work/seed-testing/reference-seeding"
+    ],
+    "capture": "Each case executed twice; identical 4099 output bytes required. Original mode uses unchanged FastSeeder128_MetaRNG. Gray uses direct rank XOR rank>>1. Balanced uses recursive rank-to-word, independent of Zig incremental edge selection. All modes seed the original target and call raw64()."
+  },
+  "cases": [
+    {
+      "expression": "sfc16",
+      "mode": "original",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "6bc1512321ab49bca0fe75c3f0b13af603f2e65837e0f45488c245c920a9a5ea"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "original",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "e6435a455725e2eeae2727de0c58354193846137790353cc3a4f8e731991c706"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "original",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "920a727553ad5764a52a660e2d89c55fb3ab2ccce46c679e815f5b57a874b410"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "original",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "511a8d3c1f8a663b9d1050650dd1b7ac1ceb47223aae9187b4f27ce457ee16a8"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "original",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "83e25ce7d81e7be034a680e41275a109fac73bec49605f928409f6d247dc2225"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "original",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "07c3f10c2733517ba136e7540a708ebc8072585f4693f357dd6b78a097c8fd0e"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "a3944525d8f8532cd49704c577063a2befb9b166df8c68cf40f2a1428af08205"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "926df64500be1602e8c5b8362d28d91e2c953262e69958da8c7ef62094a4812a"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "a3944525d8f8532cd49704c577063a2befb9b166df8c68cf40f2a1428af08205"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "3e47437fe2760126b632357af998598ab170209d97a26be043c74749278ca67c"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "a3944525d8f8532cd49704c577063a2befb9b166df8c68cf40f2a1428af08205"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "d2cb348889be521c9c42de0c2eb819c9d4d319fea241e10a94bf02b65d4ee365"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "a3944525d8f8532cd49704c577063a2befb9b166df8c68cf40f2a1428af08205"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "d2cb348889be521c9c42de0c2eb819c9d4d319fea241e10a94bf02b65d4ee365"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "balanced-gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "9d0fe7479d50052ae7d47d22b03666c9090ea569f5f82ed061efa6c81bca57fc"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "balanced-gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "b9002410fa18c943781f0bdfccc28ce2bf0a168fa219784f49b8908124660246"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "balanced-gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "3e9f13ecd96781a84d7e5069928dc614af983682b3032074696d2cb241c7928f"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "balanced-gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "a6589f63bcee7b5b7854b1dc87879500a4ec3bdffdceedf33ed408df799e7084"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "balanced-gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "8d2519cabb7a33a0ae4c297b43a94e51d4fc9ab2a12e875a2e0a3f0e88142fd2"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "balanced-gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "e3e93215e8c41acb9bddbc6e1ebefc0b0535a756587303b7cff4a3e19137dc0f"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "balanced-gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "71ef3bf1093c026141affd14aaabdaf06e6422ef4511e19603f741827490ae1a"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "balanced-gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "553f0b567f70319e661e1c6b846544e51fefca426d70c7093163b43d24959920"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "original",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "6e8fd5bb6cb1898aa68c8086743083682ea486728755a4239152ee17026dae58"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "original",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "aa574b7c60f353bc3c9967af40eea177893db9806c2fa4ca5e9c8b9ac23dad2c"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "original",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "d9f768f83c18c2f1a9da232887060b0d26321f1ea9a4b6c26d97aa49ae111400"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "original",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "f6b4e7351bd73cdfa1e7f9ba11c10c97c0323caf2d115e76e428cae2a61bef84"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "original",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "c224e2ba3a02010ef24f637a25d228fb55c5788267745e97c6b8f05fad89153c"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "original",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "a9df6778012f38288b4f622a53a73b0155260eb3c464b7b3a736e74807aa23a3"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "19899395aa8ffe830c2ee613291edd2f9f9d7770872d9ca39344f79b0f466ab4"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "d391981c6c170ed5bda3787c9855259ab7c72b58c6d08ffec656a6035f7ecf0e"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "19899395aa8ffe830c2ee613291edd2f9f9d7770872d9ca39344f79b0f466ab4"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "eb6f218c23a3390d7918b5ad381ef7ab1b9639bf610beec43b33a7cbb71c2d49"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "19899395aa8ffe830c2ee613291edd2f9f9d7770872d9ca39344f79b0f466ab4"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "daa122cc558a4330680f119dd903c3d975656ca117d9f97b880182e744391b31"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "19899395aa8ffe830c2ee613291edd2f9f9d7770872d9ca39344f79b0f466ab4"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "f616f6a1648197b96a4cc67752d13754bf5555c5c44159f3fe81acb3dc111849"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "balanced-gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "f40af65160e3ddc7cf9a8fd37277112678354f48d6cc8cec5b96ed038db51def"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "balanced-gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "6b10ace0982b9cfc27500aa2327f44c077dcd1f0ff32014d32586184f7e27bdf"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "balanced-gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "d3ffc555d31fadd6dd12d7d6fab5424c09e8ec720e1931f0de010504e737b7c3"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "balanced-gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "96e9159174b11d7e39a24130c08ba2ae43994b7381764d06257fd710acb5c9d9"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "balanced-gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "4dd92aeeb96ddb1b6122ae13c96a0e68799c0bef821caf56cab9d49473d580c6"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "balanced-gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "a08bfab77a929d318294a43d342460c57b5cd8087f97e67199f48ca0a293d0de"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "balanced-gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "d7ef4948e096cb2a5fde76d2a9ff4a872162253c3db72cef9e8c9fa2ba2a4a6b"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "balanced-gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "0cc10eddd216bf384231e50315a6b13f5679b3769bf4e1bc8d72cf3648875664"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "original",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "c2854ace0afb4fe85267ab22fc1482769d2b337f2c718f66506335656df9b0a8"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "original",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "d2f43f7b23d497b00c83ad817d194acc17c259802de790a0e7414c42ed323d58"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "original",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "c35e3478db687e34ad8f89f711272bd96540fe6fd44ff0d826d5033a13793104"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "original",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "f7d714fe96386c7e7424226307b309a06866081aeaf1b03e4d4ac28de7de2ade"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "original",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "c1c0bc9747fded88ca5929385d7d3d9027a92326cd2eee650838debb9d0c9470"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "original",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "638d1b18e8ecc612021016b14a4c8c67a635b473d0aa1dcb5af8492510f435eb"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "d775b9fb9cb5802bd59c1feab84311d447c6ee9ba641faf2f5a99b11efc9b44c"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "fc8b193dc61624abed7e9114d83ada7ec9c969c32ba22ed89f3dbdaff6f7a0f8"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "d775b9fb9cb5802bd59c1feab84311d447c6ee9ba641faf2f5a99b11efc9b44c"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "fe9867e39a5367081b0ad2b61997872114287c3558c85beb0454767338e48ceb"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "d775b9fb9cb5802bd59c1feab84311d447c6ee9ba641faf2f5a99b11efc9b44c"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "047008b0218b5dbdca8f0436ad51848dd62a2284e50fc3a8fa1debbef20f36a3"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "d775b9fb9cb5802bd59c1feab84311d447c6ee9ba641faf2f5a99b11efc9b44c"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "15a102e1211715a23a534561b2cfffcd40120408fa05d55d8634f5bdc15906ae"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "balanced-gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "f3298391797fa3d64c80c052aad06860920c2248d7f60c6eca670372db2bf3fe"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "balanced-gray",
+      "bits": 16,
+      "resolved_bits": 16,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "ca53620dd15880bf1b5390fa35e83de6d016016cfa0233021796ea496d6a214f"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "balanced-gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "89e9ede0d998927f079a70c37e726a2d9c4c375b66927566c5138ed44d2a1741"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "balanced-gray",
+      "bits": 32,
+      "resolved_bits": 32,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "8e0c1248921b2f1ca59dce57574e3b76c01abd3f2fa84245884850632d314bbc"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "balanced-gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "0640728a94f6b06b869914385259e6799d7ef83c65055afa63dfd1f68a96210c"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "balanced-gray",
+      "bits": 64,
+      "resolved_bits": 64,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "3202b642f84f483c8c216e943c12dc94a9dc77e7e22847260113bcd1fe316395"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "balanced-gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "286fbec551a5675aaf3715574d2371ac0e10923c0e814bda1fc148056285d773"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "balanced-gray",
+      "bits": 128,
+      "resolved_bits": 128,
+      "seed": "fedcba98765432100123456789abcdef",
+      "bytes": 4099,
+      "sha256": "99e6c02187d0b3c4eab083645b0bd2b3477ad26235bc3b1d2262205b7891b408"
+    },
+    {
+      "expression": "sfc16",
+      "mode": "original",
+      "bits": 0,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "83e25ce7d81e7be034a680e41275a109fac73bec49605f928409f6d247dc2225"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "original",
+      "bits": 0,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "c224e2ba3a02010ef24f637a25d228fb55c5788267745e97c6b8f05fad89153c"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "original",
+      "bits": 0,
+      "resolved_bits": 128,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "c1c0bc9747fded88ca5929385d7d3d9027a92326cd2eee650838debb9d0c9470"
+    },
+    {
+      "expression": "sfc64",
+      "mode": "original",
+      "bits": 24,
+      "resolved_bits": 24,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "10a444e5496eeb14bda34614e76a131d84bb98c9d445ff3bcf8ef743a8f4da28"
+    },
+    {
+      "expression": "sfc32",
+      "mode": "gray",
+      "bits": 24,
+      "resolved_bits": 24,
+      "seed": "0",
+      "bytes": 4099,
+      "sha256": "19899395aa8ffe830c2ee613291edd2f9f9d7770872d9ca39344f79b0f466ab4"
+    }
+  ]
+}

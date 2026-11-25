@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+"$root/scripts/check-deps"
+exec "$root/scripts/dev" sh -eu -c '
+    run=$(mktemp -d "$PROJECT_ROOT/.work/pre-commit.XXXXXX")
+    "$PROJECT_ROOT/scripts/retain-nix-environment" "$run/nix-environment"
+    exec python3 -B "$PROJECT_ROOT/tools/zig_run.py" build test \
+        -Doptimize=ReleaseFast "-Dtest-output=$run/parity" "$@"
+' -- "$@"

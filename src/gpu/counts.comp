@@ -1,0 +1,62 @@
+#version 450
+// Exact bounded integer deltas. One service owns all scratch; CPU owns u64 totals.
+layout(local_size_x = 64) in;
+layout(binding=0, std430) readonly buffer Input { uint v[]; } raw;
+layout(binding=1, std430) buffer Output { uint v[]; } result;
+layout(push_constant, std430) uniform Parameters {
+    uint bytes, kind, level, bins, layers, tile, odd, mask;
+    uint initial, warmup;
+    uint result_offset;
+} p;
+uint byte_at(uint i) { return (raw.v[i >> 2u] >> ((i & 3u) * 8u)) & 255u; }
+// 256 and 65536 both equal one modulo three. Accumulating halfwords
+// preserves the remainder and fits in 32 bits even at the ninth fold.
+uint trit_at(uint level, uint i) {
+    if (level == 0u) return byte_at(i) % 3u;
+    if (level == 1u) return ((raw.v[i >> 1u] >> ((i & 1u) * 16u)) & 65535u) % 3u;
+    if (level == 2u) return raw.v[i] % 3u;
+    uint words = 1u << (level - 2u), sum = 0u;
+    for (uint j = 0u; j < words; ++j) {
+        uint value = raw.v[i * words + j];
+        sum += (value >> 16u) + (value & 65535u);
+    }
+    return sum % 3u;
+}
+void main() {
+    uint id = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
+    if (p.kind == 0u && p.level == 0u && id < (p.bytes >> (p.layers + 1u))) {
+        uint a = trit_at(p.layers, id * 2u);
+        uint b = trit_at(p.layers, id * 2u + 1u);
+        result.v[p.result_offset + p.bins * p.layers + id] = a | (b << 16u);
+    }
+    uint samples = p.bytes >> p.level;
+    uint start = id * p.tile;
+    if (start >= samples) return;
+    const uint history = 8u;
+    uint begin = start == 0u ? 0u : start - history;
+    uint index = start == 0u ? p.initial : 0u;
+    uint end = min(start + p.tile, samples);
+    // Cache eight bin counts per invocation. Hash the whole bin so the high DC7
+    // parity bit also influences the slot. A collision flushes the old count.
+    uint last[8] = uint[](0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u);
+    uint amount[8] = uint[](0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u);
+    uint base = p.result_offset + p.level * p.bins;
+    for (uint i = begin; i < end; ++i) {
+        uint value = p.kind == 2u ? byte_at(i) : trit_at(p.level, i);
+        if (p.kind == 2u) index = ((index & p.mask) << 1u) | raw.v[(p.bytes >> 2u) + value];
+        else index = (index * 3u + value) % 19683u;
+        if (i >= start && i >= p.warmup) {
+            uint bin = index;
+            if (p.kind == 2u) bin += ((p.odd + i) & 1u) * (p.bins / 2u);
+            uint lane = (bin * 2654435761u) >> 29u;
+            if (bin != last[lane]) {
+                if (amount[lane] != 0u) atomicAdd(result.v[base + last[lane]], amount[lane]);
+                last[lane] = bin;
+                amount[lane] = 0u;
+            }
+            ++amount[lane];
+        }
+    }
+    for (uint lane = 0u; lane < 8u; ++lane)
+        if (amount[lane] != 0u) atomicAdd(result.v[base + last[lane]], amount[lane]);
+}

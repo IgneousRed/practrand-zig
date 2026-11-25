@@ -1,0 +1,51 @@
+case=empty
+case=neutral
+  metatest score: 0.0, evaluated as: no problems
+case=boundary-0.25--0.001
+  metatest score: 0.2, evaluated as: no problems
+case=boundary-0.25-+0.001
+  metatest score: 0.3, evaluated as: minor blip
+case=boundary-2--0.001
+  metatest score: 2.0, evaluated as: minor blip
+case=boundary-2-+0.001
+  metatest score: 2.0, evaluated as: major blip
+case=boundary-4--0.001
+  metatest score: 4.0, evaluated as: major blip
+case=boundary-4-+0.001
+  metatest score: 4.0, evaluated as: suspicious
+case=boundary-7--0.001
+  metatest score: 7.0, evaluated as: suspicious
+case=boundary-7-+0.001
+  metatest score: 7.0, evaluated as: very suspicious
+case=boundary-10--0.001
+  metatest score: 10.0, evaluated as: very suspicious
+case=boundary-10-+0.001
+  metatest score: 10.0, evaluated as: extreme ; probably a failure
+case=combined-eight
+  metatest score: 11.3, evaluated as: extreme ; probably a failure
+case=individual-failure
+  metatest score: 8.6, evaluated as: very suspicious
+case=weighted
+  metatest score: 3.0, evaluated as: major blip
+case=upper-tail
+  metatest score: 3.0, evaluated as: major blip
+case=default-filter
+  metatest score: 1.2, evaluated as: minor blip
+case=all-filter
+  metatest score: 1.4, evaluated as: minor blip
+case=no-selected
+  metatest score: 0.0, evaluated as: no problems
+case=smart-no-selected
+  metatest score: 0.0, evaluated as: no problems
+case=bad-probability
+  metatest score: 5.0, evaluated as: suspicious
+case=bad-suspicion
+  metatest score: 7.2, evaluated as: very suspicious
+case=extreme-retained
+  metatest score: 1204.1, evaluated as: extreme ; probably a failure
+case=endpoint-zero
+  metatest score: inf, evaluated as: extreme ; probably a failure
+case=endpoint-one
+  metatest score: inf, evaluated as: extreme ; probably a failure
+case=passfail
+  metatest score: 3010.0, evaluated as: extreme ; probably a failure

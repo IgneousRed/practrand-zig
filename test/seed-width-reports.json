@@ -1,0 +1,181 @@
+{
+  "format_version": 1,
+  "reference_version": "0.96",
+  "provenance": {
+    "source_url": "https://downloads.sourceforge.net/project/pracrand/PractRand_0.96.zip",
+    "archive_sha256": "e4caf7fda98b2c597bbda3b576753cf5a0f6047aab837c82be370ab798a672e1",
+    "executable": ".work/departure-audit/RNG_test",
+    "executable_sha256": "bfe2550deaa7db42d4708b0ab74ca5d59337df84d91149814c42c90548172933",
+    "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)",
+    "target": "x86_64-apple-darwin; executed under Rosetta",
+    "source_sha256": {
+      "vendor/PractRand/tools/RNG_test.cpp": "0dc6b33bec8f54fb18e2ad7ca09d9997b46fccf29b6c0ea074dd79f61849bb92",
+      "vendor/PractRand/tools/SeedingTester.h": "6209166cbce56a531fd55c08db6fb2a2af89a4c7c5dac0d958c47da00551413f"
+    },
+    "captures_per_case": 2,
+    "normalization": "Replace only time field with TIME; retain displayed statistical rows without trailing whitespace; no exclusions.",
+    "rebuild_command": "python3 -B tools/build_reference.py --tools --output .work/seed-width-reference/reference-values"
+  },
+  "cases": [
+    {
+      "expression": "sfc64",
+      "bits": 7,
+      "seed": "0",
+      "arguments": [
+        "sfc64",
+        "-ttseed7",
+        "-seed",
+        "0",
+        "-tf",
+        "0",
+        "-te",
+        "0",
+        "-tlmin",
+        "1KB",
+        "-tlmax",
+        "1KB",
+        "-tlmaxonly",
+        "-a",
+        "-singlethreaded",
+        "-skip_selftest"
+      ],
+      "rows": [
+        "  DC6-9x1Bytes-1                    R=  +2.2  p = 0.177     normalish",
+        "  FPF/16:(0,14-11)                  R=  +2.1  p = 0.089     normal",
+        "  FPF/16:all                        R=  -0.2  p~= 0.5       normal",
+        "  mod3n(5):(0,9-6)                  R=  -0.1  p = 0.495     normal",
+        "  mod3n(5):(1,9-6)                  R=  -2.7  p = 0.964     normal",
+        "  mod3n(5):(2,9-6)                  R=  -1.5  p = 0.801     normal"
+      ],
+      "checkpoint": "length= 1 kilobyte (2^7 seeds), time= TIME"
+    },
+    {
+      "expression": "sfc64",
+      "bits": 8,
+      "seed": "0",
+      "arguments": [
+        "sfc64",
+        "-ttseed8",
+        "-seed",
+        "0",
+        "-tf",
+        "0",
+        "-te",
+        "0",
+        "-tlmin",
+        "1KB",
+        "-tlmax",
+        "1KB",
+        "-tlmaxonly",
+        "-a",
+        "-singlethreaded",
+        "-skip_selftest"
+      ],
+      "rows": [
+        "  DC6-9x1Bytes-1                    R=  +0.4  p = 0.438     normal",
+        "  FPF/16:(0,14-11)                  R=  -0.8  p = 0.691     normal",
+        "  FPF/16:all                        R=  -1.4  p~= 0.7       normal",
+        "  mod3n(5):(0,9-6)                  R=  -1.1  p = 0.720     normal",
+        "  mod3n(5):(1,9-6)                  R=  +0.0  p = 0.465     normal",
+        "  mod3n(5):(2,9-6)                  R=  +1.0  p = 0.280     normal"
+      ],
+      "checkpoint": "length= 1 kilobyte (2^7 seeds), time= TIME"
+    },
+    {
+      "expression": "sfc64",
+      "bits": 15,
+      "seed": "0",
+      "arguments": [
+        "sfc64",
+        "-ttseed15",
+        "-seed",
+        "0",
+        "-tf",
+        "0",
+        "-te",
+        "0",
+        "-tlmin",
+        "1KB",
+        "-tlmax",
+        "1KB",
+        "-tlmaxonly",
+        "-a",
+        "-singlethreaded",
+        "-skip_selftest"
+      ],
+      "rows": [
+        "  DC6-9x1Bytes-1                    R=  +1.6  p = 0.247     normalish",
+        "  FPF/16:(0,14-11)                  R=  +0.8  p = 0.255     normal",
+        "  FPF/16:all                        R=  +3.0  p~= 0.2       normal",
+        "  mod3n(5):(0,9-6)                  R=  -0.9  p = 0.663     normal",
+        "  mod3n(5):(1,9-6)                  R=  -0.8  p = 0.647     normal",
+        "  mod3n(5):(2,9-6)                  R=  -0.6  p = 0.601     normal"
+      ],
+      "checkpoint": "length= 1 kilobyte (2^7 seeds), time= TIME"
+    },
+    {
+      "expression": "sfc16",
+      "bits": 8,
+      "seed": "fedcba98765432100123456789abcdef",
+      "arguments": [
+        "sfc16",
+        "-ttseed8",
+        "-seed",
+        "fedcba98765432100123456789abcdef",
+        "-tf",
+        "0",
+        "-te",
+        "0",
+        "-tlmin",
+        "1KB",
+        "-tlmax",
+        "1KB",
+        "-tlmaxonly",
+        "-a",
+        "-singlethreaded",
+        "-skip_selftest"
+      ],
+      "rows": [
+        "  DC6-9x1Bytes-1                    R=  -1.8  p = 0.872     normalish",
+        "  FPF/16:(0,14-11)                  R=  +0.2  p = 0.370     normal",
+        "  FPF/16:all                        R=  +3.7  p~= 0.1       normal",
+        "  mod3n(5):(0,9-6)                  R=  +3.1  p = 0.071     normal",
+        "  mod3n(5):(1,9-6)                  R=  +1.7  p = 0.183     normal",
+        "  mod3n(5):(2,9-6)                  R=  +2.4  p = 0.116     normal"
+      ],
+      "checkpoint": "length= 1 kilobyte (2^7 seeds), time= TIME"
+    },
+    {
+      "expression": "sfc32",
+      "bits": 15,
+      "seed": "fedcba98765432100123456789abcdef",
+      "arguments": [
+        "sfc32",
+        "-ttseed15",
+        "-seed",
+        "fedcba98765432100123456789abcdef",
+        "-tf",
+        "0",
+        "-te",
+        "0",
+        "-tlmin",
+        "1KB",
+        "-tlmax",
+        "1KB",
+        "-tlmaxonly",
+        "-a",
+        "-singlethreaded",
+        "-skip_selftest"
+      ],
+      "rows": [
+        "  DC6-9x1Bytes-1                    R=  +5.2  p = 0.028     unusual",
+        "  FPF/16:(0,14-11)                  R=  +1.9  p = 0.100     normal",
+        "  FPF/16:all                        R=  +1.7  p~= 0.3       normal",
+        "  mod3n(5):(0,9-6)                  R=  +2.0  p = 0.152     normal",
+        "  mod3n(5):(1,9-6)                  R=  +4.9  p = 0.019     normalish",
+        "  mod3n(5):(2,9-6)                  R=  +1.9  p = 0.159     normal"
+      ],
+      "checkpoint": "length= 1 kilobyte (2^7 seeds), time= TIME"
+    }
+  ]
+}

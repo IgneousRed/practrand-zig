@@ -1,0 +1,10 @@
+/.work/
+AGENTS.md
+/.private/
+/.local/
+/.vendor/
+/.zig-cache/
+/zig-out/
+.DS_Store
+__pycache__/
+*.pyc

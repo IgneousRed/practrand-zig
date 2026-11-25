@@ -1,0 +1,8 @@
+#!/bin/sh
+# Explicit build/runtime entrypoint for the optional locked Vulkan closure.
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+if [ -n "${PROJECT_NIX_ENVIRONMENT:-}" ] && [ -n "${VULKAN_SDK:-}" ]; then
+    exec "$@"
+fi
+exec "$root/scripts/dev" --profile vulkan "$@"

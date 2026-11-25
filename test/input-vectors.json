@@ -1,0 +1,636 @@
+{
+  "format_version": 1,
+  "reference_version": "0.96",
+  "bytes": 4099,
+  "seed": "0",
+  "input_path": "test/input-bytes.bin",
+  "input_sha256": "b0589d4d42789452ac5541257b179c121b006559eedebc9a3d8cc49dece1bdf8",
+  "provenance": {
+    "reference_sha256": "de1027511318c898577086e4d30baa8cce600e45cc4d64efdcc7b01fd1c8bb6e",
+    "driver_source": "// Independent original-native-width byte probe; built only under .work/.\n#include <cstdio>\n#include <cstdlib>\n#include <cstring>\n#include <cmath>\n#include <iostream>\n#include <list>\n#include <deque>\n#include <map>\n#include <memory>\n#include <set>\n#include <sstream>\n#include <string>\n#include <vector>\n#include <PractRand_full.h>\n#include <PractRand/RNGs/all.h>\n#include <PractRand/RNGs/other/mt19937.h>\n#include <PractRand/RNGs/other/transform.h>\n#include <PractRand/RNGs/other/lcgish.h>\n#include <PractRand/RNGs/other/oddball.h>\n#include <PractRand/RNGs/other/simple.h>\n#include <PractRand/RNGs/other/cbuf.h>\n#include <PractRand/RNGs/other/indirection.h>\n#include <PractRand/RNGs/other/special.h>\n#include \"tools/RNG_from_name.h\"\nusing namespace PractRand;\n#include \"tools/Candidate_RNGs.h\"\n#include \"tools/SeedingTester.h\"\n#if defined(__i386__) || defined(__x86_64__)\n#include \"tools/dummy_rng.h\"\n#else\n// Equivalent active dummy algorithm; the original header includes x86intrin.h\n// unconditionally for Clang/GCC, even on ARM. Captures use its original x86 header.\nclass dummy_rng : public RNGs::vRNG32 {\n    Uint32 a, b, c, d;\npublic:\n    Uint32 raw32() override {\n        const Uint64 product = a * Uint64(0x9e3779b97f4a7c15ULL);\n        a = b ^ Uint32(product >> 32); b = Uint32(product); return b;\n    }\n    void walk_state(StateWalkingObject *walker) override {\n        walker->handle(a); walker->handle(b); walker->handle(c); walker->handle(d);\n    }\n    std::string get_name() const override { return \"dummy_rng\"; }\n};\n#endif\nint main(int argc, char **argv) {\n    RNG_Factories::register_recommended_RNGs();\n    RNG_Factories::register_nonrecommended_RNGs();\n    RNG_Factories::register_candidate_RNGs();\n    RNG_Factories::register_input_RNGs();\n    FastSeeder128_MetaRNG::register_name();\n    RecursiveSeed64_MetaRNG::register_name();\n    EntropyPool_MetaRNG::register_name();\n    RNG_Factories::RNG_factory_index[\"dummy_rng\"] = RNG_Factories::_generic_notrecommended_RNG_factory<dummy_rng>;\n    if (argc == 2 && !std::strcmp(argv[1], \"--factories\")) {\n        for (const auto &entry : RNG_Factories::RNG_factory_index) std::puts(entry.first.c_str());\n        return 0;\n    }\n    if (argc != 5) return 2;\n    std::unique_ptr<RNGs::vRNG> rng(RNG_Factories::create_rng(argv[1]));\n    if (!rng) return 3;\n    rng->seed(std::strtoull(argv[2], nullptr, 16), std::strtoull(argv[3], nullptr, 16));\n    std::fprintf(stderr, \"%d\\n%s\\n\", rng->get_native_output_size(), rng->get_name().c_str());\n    size_t remaining = std::strtoull(argv[4], nullptr, 10);\n    Tests::TestBlock blocks[4];\n    while (remaining) {\n        const size_t count = remaining < sizeof blocks ? remaining : sizeof blocks;\n        blocks[0].fill(rng.get(), (count + 1023) / 1024);\n        if (std::fwrite(blocks, 1, count, stdout) != count) return 4;\n        remaining -= count;\n    }\n    return std::fflush(stdout) == 0 ? 0 : 5;\n}\n",
+    "compiler": "Apple clang version 21.0.0 (clang-2100.3.34.2)\nTarget: arm64-apple-darwin25.6.0\nThread model: posix\nInstalledDir: /Library/Developer/CommandLineTools/usr/bin\n",
+    "build": "python3 -B tools/build_reference.py --driver test/reference_rngs.cpp --output REFERENCE",
+    "archive_sha256": "e4caf7fda98b2c597bbda3b576753cf5a0f6047aab837c82be370ab798a672e1",
+    "architecture": "x86_64",
+    "seed_api": "seed(low64,high64)",
+    "capture_source": "\"\"\"Explicitly capture original 0.96 input expressions; never run by tests.\"\"\"\nimport argparse\nimport hashlib\nimport json\nfrom pathlib import Path\nimport subprocess\n\nparser = argparse.ArgumentParser(description=__doc__)\nparser.add_argument('reference', type=Path)\nparser.add_argument('output', type=Path)\nargs = parser.parse_args()\nif args.output.exists():\n    parser.error('destination already exists')\ninput_path = Path('test/input-bytes.bin')\ndata = input_path.read_bytes()\nexpressions = []\nfor width in ('', '8', '16', '32', '64'):\n    for source in (f'stdin{width}', f'file{width}({input_path})'):\n        expressions.extend([source, f'As8({source})', f'As16({source})',\n                            f'As32({source})', f'As64({source})',\n                            f'BDS({source},4)', f'SShrink({source})',\n                            f'add({source},sfc64)'])\nexpressions += ['SeedingTester(sfc64)', 'SeedingTester(sfc32,16)',\n                'As8(SeedingTester(sfc16,32))', 'RecursiveSeed64(sfc64)',\n                'RecursiveSeed64(sfc32)', 'EntropyPoolingTester(arbee,8,16)',\n                'EntropyPoolingTester(arbee,8,8)',\n                'EntropyPoolingTester(sha2_based_pool,57,57)']\ncases = []\nfor expression in expressions:\n    size = 0 if expression.startswith('EntropyPoolingTester(') else 4099\n    command = [str(args.reference.resolve()), expression, '0', '0', str(size)]\n    first = subprocess.run(command, input=data, capture_output=True, check=True, timeout=60)\n    second = subprocess.run(command, input=data, capture_output=True, check=True, timeout=60)\n    if first.stdout != second.stdout or first.stderr != second.stderr or len(first.stdout) != size:\n        raise RuntimeError(f'unstable or incomplete reference: {expression}')\n    width, name = first.stderr.decode().splitlines()\n    cases.append(dict(expression=expression, bytes=size, width=int(width), name=name,\n                      sha256=hashlib.sha256(first.stdout).hexdigest()))\nfixture = dict(format_version=1, reference_version='0.96', bytes=4099,\n               seed='0', input_path=str(input_path), input_sha256=hashlib.sha256(data).hexdigest(),\n               provenance=dict(reference_sha256=hashlib.sha256(args.reference.read_bytes()).hexdigest(),\n                               driver_source=Path('test/reference_rngs.cpp').read_text(),\n                               compiler=subprocess.check_output(['clang++', '--version'], text=True),\n                               build='python3 -B tools/build_reference.py --driver test/reference_rngs.cpp --output REFERENCE',\n                               archive_sha256='e4caf7fda98b2c597bbda3b576753cf5a0f6047aab837c82be370ab798a672e1',\n                               architecture='x86_64', seed_api='seed(low64,high64)',\n                               capture_source=Path(__file__).read_text()), cases=cases)\nargs.output.parent.mkdir(parents=True, exist_ok=True)\nargs.output.write_text(json.dumps(fixture, indent=2) + '\\n')\nprint(f'{len(cases)} repeated original captures saved to {args.output}')\n"
+  },
+  "cases": [
+    {
+      "expression": "stdin",
+      "bytes": 4099,
+      "width": -1,
+      "name": "RNG_stdin",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(stdin)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_stdin)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(stdin)",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_stdin)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(stdin)",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_stdin)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(stdin)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_stdin)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(stdin,4)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[BDS16]RNG_stdin",
+      "sha256": "ea5a6922b9316fe01638952dc7a6ed1e46c6bae1c657d1ad8a91712d6e936040"
+    },
+    {
+      "expression": "SShrink(stdin)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_stdin",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(stdin,sfc64)",
+      "bytes": 4099,
+      "width": -1,
+      "name": "add_inf(RNG_stdin,sfc64)",
+      "sha256": "1d967f8c6f8c097ebb7cbb022492392ecc646602a80444e64cb8c7bf8f956a0a"
+    },
+    {
+      "expression": "file(test/input-bytes.bin)",
+      "bytes": 4099,
+      "width": -1,
+      "name": "RNG_file(\"test/input-bytes.bin\")",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(file(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_file(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(file(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_file(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(file(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_file(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(file(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_file(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(file(test/input-bytes.bin),4)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[BDS16]RNG_file(\"test/input-bytes.bin\")",
+      "sha256": "ea5a6922b9316fe01638952dc7a6ed1e46c6bae1c657d1ad8a91712d6e936040"
+    },
+    {
+      "expression": "SShrink(file(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_file(\"test/input-bytes.bin\")",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(file(test/input-bytes.bin),sfc64)",
+      "bytes": 4099,
+      "width": -1,
+      "name": "add_inf(RNG_file(\"test/input-bytes.bin\"),sfc64)",
+      "sha256": "1d967f8c6f8c097ebb7cbb022492392ecc646602a80444e64cb8c7bf8f956a0a"
+    },
+    {
+      "expression": "stdin8",
+      "bytes": 4099,
+      "width": 8,
+      "name": "RNG_stdin8",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(stdin8)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_stdin8)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(stdin8)",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_stdin8)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(stdin8)",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_stdin8)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(stdin8)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_stdin8)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(stdin8,4)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[BDS16]RNG_stdin8",
+      "sha256": "ea5a6922b9316fe01638952dc7a6ed1e46c6bae1c657d1ad8a91712d6e936040"
+    },
+    {
+      "expression": "SShrink(stdin8)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_stdin8",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(stdin8,sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "add64(RNG_stdin8,sfc64)",
+      "sha256": "329e21312b499700970e1720607a8a5e0df00c9ef952564b4ec4b7a92a735f70"
+    },
+    {
+      "expression": "file8(test/input-bytes.bin)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "RNG_file8(\"test/input-bytes.bin\")",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(file8(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_file8(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(file8(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_file8(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(file8(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_file8(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(file8(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_file8(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(file8(test/input-bytes.bin),4)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[BDS16]RNG_file8(\"test/input-bytes.bin\")",
+      "sha256": "ea5a6922b9316fe01638952dc7a6ed1e46c6bae1c657d1ad8a91712d6e936040"
+    },
+    {
+      "expression": "SShrink(file8(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_file8(\"test/input-bytes.bin\")",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(file8(test/input-bytes.bin),sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "add64(RNG_file8(\"test/input-bytes.bin\"),sfc64)",
+      "sha256": "329e21312b499700970e1720607a8a5e0df00c9ef952564b4ec4b7a92a735f70"
+    },
+    {
+      "expression": "stdin16",
+      "bytes": 4099,
+      "width": 16,
+      "name": "RNG_stdin16",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(stdin16)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_stdin16)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(stdin16)",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_stdin16)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(stdin16)",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_stdin16)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(stdin16)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_stdin16)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(stdin16,4)",
+      "bytes": 4099,
+      "width": 16,
+      "name": "[BDS16]RNG_stdin16",
+      "sha256": "41464ffc39da52a7e53f37068ae4c8445727543cad0fdcb3338fe36ff05fba74"
+    },
+    {
+      "expression": "SShrink(stdin16)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_stdin16",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(stdin16,sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "add64(RNG_stdin16,sfc64)",
+      "sha256": "329e21312b499700970e1720607a8a5e0df00c9ef952564b4ec4b7a92a735f70"
+    },
+    {
+      "expression": "file16(test/input-bytes.bin)",
+      "bytes": 4099,
+      "width": 16,
+      "name": "RNG_file16(\"test/input-bytes.bin\")",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(file16(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_file16(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(file16(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_file16(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(file16(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_file16(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(file16(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_file16(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(file16(test/input-bytes.bin),4)",
+      "bytes": 4099,
+      "width": 16,
+      "name": "[BDS16]RNG_file16(\"test/input-bytes.bin\")",
+      "sha256": "41464ffc39da52a7e53f37068ae4c8445727543cad0fdcb3338fe36ff05fba74"
+    },
+    {
+      "expression": "SShrink(file16(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_file16(\"test/input-bytes.bin\")",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(file16(test/input-bytes.bin),sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "add64(RNG_file16(\"test/input-bytes.bin\"),sfc64)",
+      "sha256": "329e21312b499700970e1720607a8a5e0df00c9ef952564b4ec4b7a92a735f70"
+    },
+    {
+      "expression": "stdin32",
+      "bytes": 4099,
+      "width": 32,
+      "name": "RNG_stdin32",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(stdin32)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_stdin32)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(stdin32)",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_stdin32)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(stdin32)",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_stdin32)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(stdin32)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_stdin32)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(stdin32,4)",
+      "bytes": 4099,
+      "width": 32,
+      "name": "[BDS16]RNG_stdin32",
+      "sha256": "3a9085279ad2b7dc071c768ddb66b2357c7197bf440ac2ec583f249ad449844a"
+    },
+    {
+      "expression": "SShrink(stdin32)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_stdin32",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(stdin32,sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "add64(RNG_stdin32,sfc64)",
+      "sha256": "329e21312b499700970e1720607a8a5e0df00c9ef952564b4ec4b7a92a735f70"
+    },
+    {
+      "expression": "file32(test/input-bytes.bin)",
+      "bytes": 4099,
+      "width": 32,
+      "name": "RNG_file32(\"test/input-bytes.bin\")",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(file32(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_file32(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(file32(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_file32(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(file32(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_file32(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(file32(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_file32(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(file32(test/input-bytes.bin),4)",
+      "bytes": 4099,
+      "width": 32,
+      "name": "[BDS16]RNG_file32(\"test/input-bytes.bin\")",
+      "sha256": "3a9085279ad2b7dc071c768ddb66b2357c7197bf440ac2ec583f249ad449844a"
+    },
+    {
+      "expression": "SShrink(file32(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_file32(\"test/input-bytes.bin\")",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(file32(test/input-bytes.bin),sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "add64(RNG_file32(\"test/input-bytes.bin\"),sfc64)",
+      "sha256": "329e21312b499700970e1720607a8a5e0df00c9ef952564b4ec4b7a92a735f70"
+    },
+    {
+      "expression": "stdin64",
+      "bytes": 4099,
+      "width": 64,
+      "name": "RNG_stdin64",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(stdin64)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_stdin64)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(stdin64)",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_stdin64)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(stdin64)",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_stdin64)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(stdin64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_stdin64)",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(stdin64,4)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "[BDS16]RNG_stdin64",
+      "sha256": "fb548fc3ae2916bbdf452f4812375c3251c9fa85afed84e15a7df743e41382b2"
+    },
+    {
+      "expression": "SShrink(stdin64)",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_stdin64",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(stdin64,sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "add64(RNG_stdin64,sfc64)",
+      "sha256": "329e21312b499700970e1720607a8a5e0df00c9ef952564b4ec4b7a92a735f70"
+    },
+    {
+      "expression": "file64(test/input-bytes.bin)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "RNG_file64(\"test/input-bytes.bin\")",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As8(file64(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(RNG_file64(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As16(file64(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 16,
+      "name": "As16(RNG_file64(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As32(file64(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 32,
+      "name": "As32(RNG_file64(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "As64(file64(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 64,
+      "name": "As64(RNG_file64(\"test/input-bytes.bin\"))",
+      "sha256": "2e8dddb6a5e56255bb2be81453f82ddadba810bc05104741ffee56494d2685e2"
+    },
+    {
+      "expression": "BDS(file64(test/input-bytes.bin),4)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "[BDS16]RNG_file64(\"test/input-bytes.bin\")",
+      "sha256": "fb548fc3ae2916bbdf452f4812375c3251c9fa85afed84e15a7df743e41382b2"
+    },
+    {
+      "expression": "SShrink(file64(test/input-bytes.bin))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "[SShrink]RNG_file64(\"test/input-bytes.bin\")",
+      "sha256": "778cf77ac99f5ab54af9bd72e6f526557e8724b2edbbc353029416c665e7c843"
+    },
+    {
+      "expression": "add(file64(test/input-bytes.bin),sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "add64(RNG_file64(\"test/input-bytes.bin\"),sfc64)",
+      "sha256": "329e21312b499700970e1720607a8a5e0df00c9ef952564b4ec4b7a92a735f70"
+    },
+    {
+      "expression": "SeedingTester(sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "SeedingTester(sfc64)",
+      "sha256": "c1c0bc9747fded88ca5929385d7d3d9027a92326cd2eee650838debb9d0c9470"
+    },
+    {
+      "expression": "SeedingTester(sfc32,16)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "SeedingTester(sfc32,16)",
+      "sha256": "6e8fd5bb6cb1898aa68c8086743083682ea486728755a4239152ee17026dae58"
+    },
+    {
+      "expression": "As8(SeedingTester(sfc16,32))",
+      "bytes": 4099,
+      "width": 8,
+      "name": "As8(SeedingTester(sfc16,32))",
+      "sha256": "8514b1963d4bc2b520b1a90bd96070a009ca3b59f91374a8b12d0845b421d043"
+    },
+    {
+      "expression": "RecursiveSeed64(sfc64)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "RecursiveSeed64(sfc64)",
+      "sha256": "36d39dd0831b8babd4764b855962e5e38c2c431a89d146b8d5b7f9ffb16b4092"
+    },
+    {
+      "expression": "RecursiveSeed64(sfc32)",
+      "bytes": 4099,
+      "width": 64,
+      "name": "RecursiveSeed64(sfc32)",
+      "sha256": "2c302fbe193cb6dc5bdcd6c0a1173933533d39038aaf8ecb7a91a170c6749cc6"
+    },
+    {
+      "expression": "EntropyPoolingTester(arbee,8,16)",
+      "bytes": 0,
+      "width": 64,
+      "name": "EntropyPoolingTester(arbee,8to8)",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "expression": "EntropyPoolingTester(arbee,8,8)",
+      "bytes": 0,
+      "width": 64,
+      "name": "EntropyPoolingTester(arbee,8to8)",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "expression": "EntropyPoolingTester(sha2_based_pool,57,57)",
+      "bytes": 0,
+      "width": 64,
+      "name": "EntropyPoolingTester(sha2_based_pool,57to57)",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    }
+  ]
+}

@@ -1,0 +1,124 @@
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw                          R=  +1.2                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-pass                         R=  +0.0    "pass"      normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-fail                         R=  +1.0    "fail"        FAIL !!!!!!!!  
+  Test Name                         Raw       Processed     Evaluation       
+  case-good-p                       R=  +1.2  p = 0.175     normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-bad-p                        R=  -2.3  p~= 0.02      normalish        
+  Test Name                         Raw       Processed     Evaluation       
+  case-good-p-low                   R=  +6.1  p =   4e-9     VERY SUSPICIOUS 
+  Test Name                         Raw       Processed     Evaluation       
+  case-good-p-high                  R=  -6.1  p = 1-4e-9     VERY SUSPICIOUS 
+  Test Name                         Raw       Processed     Evaluation       
+  case-bad-p-middle                 R=  +0.0  p~= 0.5       normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-normal                       R=  +2.3  p~= 0.2       normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-good-s                       R=  +3.0  p =  1.2e-4   mildly suspicious
+  Test Name                         Raw       Processed     Evaluation       
+  case-bad-s-high                   R=  -3.0  p~=1-1.2e-4   mildly suspicious
+  Test Name                         Raw       Processed     Evaluation       
+  case-tiny-weight                  R=  +0.0  p =  4.1e-25    FAIL !         
+  Test Name                         Raw       Processed     Evaluation       
+  case-weight-boundary              R=  +0.0  p =  4.1e-25    FAIL !         
+  Test Name                         Raw       Processed     Evaluation       
+  case-long-name-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxR=  +0.0  p = 0.500     normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw-99.94                    R= +99.9                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw-99.96                    R=+100.0                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw--99.96                   R=-100.0                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw-999.94                   R=+999.9                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw-999.96                   R= +1000                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw-9998.9                   R= +9999                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw-9999                     R= +9999                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw--9999                    R= -9999                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw-99999                    R=+99999                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw-100000                   R>+99999                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-raw--100000                  R<-99999                normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-0                      R=  +0.0  p = 0.500     normal           
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-0.4                    R=  +0.0  p = 0.199     normalish        
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-0.94                   R=  +0.0  p = 0.057     normalish        
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-0.96                   R=  +0.0  p = 0.055     normalish        
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-1.2                    R=  +0.0  p = 0.032     unusual          
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-2.2                    R=  +0.0  p =  3.1e-3   mildly suspicious
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-3.2                    R=  +0.0  p =  3.1e-4   suspicious       
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-4.2                    R=  +0.0  p =  3.1e-5   very suspicious  
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-6.2                    R=  +0.0  p =  3.1e-7    VERY SUSPICIOUS 
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-8.6                    R=  +0.0  p =  1.2e-9     FAIL           
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-9.94                   R=  +0.0  p =  5.7e-11    FAIL           
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-9.96                   R=  +0.0  p =  5.4e-11    FAIL           
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-9.994                  R=  +0.0  p =  5.0e-11    FAIL           
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-9.996                  R=  +0.0  p =  5.0e-11    FAIL           
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-12.1                   R=  +0.0  p =  3.9e-13    FAIL !         
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-17.1                   R=  +0.0  p =  3.9e-18    FAIL !!        
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-25.1                   R=  +0.0  p =  3.9e-26    FAIL !!!       
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-45.1                   R=  +0.0  p =  3.9e-46    FAIL !!!!      
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-85.1                   R=  +0.0  p =  3.9e-86    FAIL !!!!!     
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-99.49                  R=  +0.0  p =  1.6e-100   FAIL !!!!!     
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-99.51                  R=  +0.0  p =  1.5e-100   FAIL !!!!!     
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-99.94                  R=  +0.0  p =  5.7e-101   FAIL !!!!!     
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-99.96                  R=  +0.0  p =  5.4e-101   FAIL !!!!!     
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-165.1                  R=  +0.0  p =  3.9e-166   FAIL !!!!!!    
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-325.1                  R=  +0.0  p =  3.9e-326   FAIL !!!!!!!   
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-999.4                  R=  +0.0  p =  1e-1000    FAIL !!!!!!!!  
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-999.6                  R=  +0.0  p =  1e-1000    FAIL !!!!!!!!  
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-9998.8                 R=  +0.0  p = 0           FAIL !!!!!!!!  
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-9999.2                 R=  +0.0  p = 0           FAIL !!!!!!!!  
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-9999.6                 R=  +0.0  p = 0           FAIL !!!!!!!!  
+  Test Name                         Raw       Processed     Evaluation       
+  case-score-12000                  R=  +0.0  p = 0           FAIL !!!!!!!!  
+  Test Name                         Raw       Processed     Evaluation       
+  case-sus-9.94                     R=  +0.0  p =  5.7e-11    FAIL           
+  Test Name                         Raw       Processed     Evaluation       
+  case-sus-9.96                     R=  +0.0  p =  5.4e-11    FAIL           
+  Test Name                         Raw       Processed     Evaluation       
+  case-sus--9.96                    R=  +0.0  p =1-5.4e-11    FAIL           
+  Test Name                         Raw       Processed     Evaluation       
+  case-sus-999.4                    R=  +0.0  p =  1e-1000    FAIL !!!!!!!   
+  Test Name                         Raw       Processed     Evaluation       
+  case-sus-999.6                    R=  +0.0  p =  1e-1000    FAIL !!!!!!!   
+  Test Name                         Raw       Processed     Evaluation       
+  case-sus--999.6                   R=  +0.0  p =1-1e-1000    FAIL !!!!!!!   

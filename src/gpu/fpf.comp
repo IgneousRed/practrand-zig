@@ -1,0 +1,43 @@
+#version 450
+// Exact FPF/4 windows without optional shaderInt64 or 8-bit storage features.
+layout(local_size_x = 128) in;
+layout(binding=0, std430) readonly buffer Input { uint v[]; } input_words;
+layout(binding=1, std430) buffer Output { uint v[]; } result;
+layout(push_constant, std430) uniform Parameters { uint first_word, words; } p;
+uint bin_for(uint low, uint high) {
+    uint zeros = low != 0u ? uint(findLSB(low)) : (high != 0u ? 32u + uint(findLSB(high)) : 64u);
+    uint exponent = min(zeros, 51u);
+    uint remove = exponent + uint(exponent < 51u);
+    uint significand;
+    if (remove >= 32u) significand = high >> (remove - 32u);
+    else significand = (low >> remove) | (high << (32u - remove));
+    significand &= 16383u;
+    return exponent * 16384u + significand;
+}
+void main() {
+    uint id = gl_GlobalInvocationID.x + gl_GlobalInvocationID.y * gl_NumWorkGroups.x * gl_WorkGroupSize.x;
+    const uint width = 8u;
+    uint first = id * width;
+    if (first >= p.words) return;
+    uint word = p.first_word + first, count = min(width, p.words - first);
+    for (uint i = 0u; i < count;) {
+        uint a = input_words.v[word + i], b = input_words.v[word + i + 1u], c = input_words.v[word + i + 2u];
+        uint increment = 1u, phases = 8u;
+        // Equal consecutive words repeat the same eight nibble windows.
+        if (a == b && b == c) {
+            while (i + increment < count && input_words.v[word + i + increment + 2u] == a) ++increment;
+            // Equal halfwords repeat after four windows, including FPF/16 alignment.
+            if ((a >> 16u) == (a & 65535u)) phases = 4u;
+        }
+        i += increment;
+        uint hits = phases == 4u ? increment * 2u : increment;
+        for (uint k = 0u; k < phases; ++k) {
+            a = (a >> 4u) | (b << 28u);
+            b = (b >> 4u) | (c << 28u);
+            c >>= 4u;
+            // Both initial and continuing batches start four bits past a word boundary.
+            uint aligned = uint((k & 3u) == 3u);
+            atomicAdd(result.v[2u * bin_for(a, b) + aligned], hits);
+        }
+    }
+}
