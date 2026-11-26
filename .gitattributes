@@ -1,0 +1,10 @@
+# Private instructions and local storage are never source-export inputs.
+**/AGENTS.md export-ignore
+**/.private export-ignore
+**/.private/** export-ignore
+**/.local export-ignore
+**/.local/** export-ignore
+**/.vendor export-ignore
+**/.vendor/** export-ignore
+**/.work export-ignore
+**/.work/** export-ignore

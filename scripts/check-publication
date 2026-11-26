@@ -51,7 +51,7 @@ while read -r commit; do
         esac
         if [ "$mode" = private ]; then
             case "$path" in
-                README.md|.gitignore|.publication-*|scripts/check-publication|.githooks/pre-push|todo/*|reworks/*|experiments/*|instructions/*) ;;
+                README.md|.gitignore|.gitattributes|.publication-*|scripts/check-publication|.githooks/pre-push|todo/*|reworks/*|experiments/*|instructions/*) ;;
                 *) fail "not a private maintained-record path: $path" ;;
             esac
         fi
