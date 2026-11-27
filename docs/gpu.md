@@ -47,8 +47,10 @@ store, without writing system-wide SDK files. Copy-only extraction and 77 hardwa
 checks per driver passed in the locked environment on ARM64 macOS, using both
 MoltenVK and KosmicKrisp. A short Expanded run matched all 135 displayed CPU rows.
 
-Linux uses the Vulkan headers, loader and shader tools selected by the shared
-nixpkgs lock; a real GPU and its operating-system driver remain prerequisites.
+Linux retains the shared catalog's Vulkan headers/loader and SPIRV-Tools
+SDK 1.4.363.0 sources and shaderc 2026.1. These have evaluation-only coverage;
+their upgrade and native GPU/runtime validation remain outstanding. A real GPU
+and its operating-system driver remain prerequisites.
 No fallback to a host SDK or a different compiler is permitted. `-Dvulkan-sdk`
 can select a separately recorded immutable SDK for explicit comparisons.
 There are no windowing or graphics-surface dependencies. Vulkan uses 1.1 compute

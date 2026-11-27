@@ -6,6 +6,10 @@ let
   toolchain = if darwin then import ./llvm23/llvm23-toolchain.nix { inherit pkgs; } else null;
   python = if darwin then toolchain.python else pkgs.python315;
   git = if darwin then toolchain.git else pkgs.git;
+  curl = if darwin then toolchain.dependencies.curl else pkgs.curl;
+  bash = if darwin then pkgs.bash.override {
+    readline = toolchain.dependencies.readline;
+  } else pkgs.bash;
   native = if darwin then toolchain.llvmPackages else pkgs.llvmPackages_23;
   appleSdk = if darwin then toolchain.sdk else null;
   vulkan = if darwin then pkgs.callPackage ./lunarg-sdk.nix { } else
@@ -18,7 +22,7 @@ let
   tools = [
     # The compiler wrapper already exposes its matching binutils.
     zig python native.clang
-    pkgs.bash pkgs.coreutils git pkgs.curl
+    bash pkgs.coreutils git curl
   ] ++ lib.optional darwin native.llvm;
   platformInputs = lib.optional darwin appleSdk;
   variables = {

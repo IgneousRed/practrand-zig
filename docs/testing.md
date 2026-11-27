@@ -4,17 +4,23 @@ Run commands from the repository root inside `./scripts/dev bash`. Zig, Python,
 Clang and SDK inputs come from the locked Nix environment, not host installations.
 On Apple Silicon, the [native tool bundle](../nix/llvm23/README.md) supplies
 LLVM/Clang 23.1.6 and rebuilt Python 3.15.2, requiring macOS 26 or later.
-Git keeps its catalog source pin and uses the same rebuilt Python for its helper.
+The shared native bundle pins Git 2.56.1 and Perl 5.44.0, and supplies the same
+rebuilt Python for Git helpers. Its shared library recipes update compression,
+TLS-adjacent and other support dependencies without replacing their provider roles.
+Bash retains its catalog source and features while sharing Readline 8.3 patch 6.
 Its verified compiler context uses SDK 14.4 headers and SDK 27 C++ link stubs.
 The environment passes that same stub directory to Zig's Metal build.
-The Linux recipe remains selected from the shared nixpkgs lock. Zig retains its
-own pinned backend; upgrading Clang does not replace that embedded toolchain.
+The Linux recipe retains the shared catalog's Clang/LLVM 23.1.3 and Python 3.15.2.
+Its package graph has been evaluated, but native Linux runtime and numerical
+validation remain outstanding; it is not certified as the latest compatible
+Linux toolchain. Zig retains its own pinned backend; upgrading Clang does not
+replace that embedded toolchain.
 The selected Zig binary still retains older LLD, libc++ and compiler-rt runtime
 packages. They remain dependencies of Zig, separate from the native compiler and
-rebuilt Python closures. Git's Perl support also retains three older support
-outputs (20,044,952 bytes), including compiler-rt 21 and SDK libc++ 22; it retains
-neither an older LLVM backend nor Python 3.14. Historical captures keep their
-recorded environments.
+rebuilt Python closures. The refreshed Git/Python bundle uses the same
+published native recipes and realized outputs as compatible consumers. Bootstrap
+compiler and SDK support inputs have separate roles; they are not substitutes
+for Zig's runtime backend. Historical captures keep their recorded environments.
 Check dependency updates before every commit with `scripts/check-deps`; report
 new versions without changing locks implicitly. An unavailable update source
 fails the check. Explicit reference builds also require the locked archive tools. New reference
